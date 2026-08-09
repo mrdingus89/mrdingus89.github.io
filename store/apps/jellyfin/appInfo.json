@@ -3,5 +3,5 @@
     "desc": "The Free Software Media System",
     "author": "Jellyfin Project",
     "selfHosted": true,
-    "iconUrl": "./apps/jellyfin/appIcon.png"
+    "iconUrl": "https://raw.githubusercontent.com/mrdingus89/mrdingus89.github.io/refs/heads/main/store/apps/jellyfin/appIcon.png"
 }
