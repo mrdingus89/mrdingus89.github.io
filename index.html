@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Homebrew Launcher Installer</title>
+<style>
+  :root {
+    --bg-gradient: linear-gradient(180deg, #c98bf5 0%, #32104e 100%);
+    --panel: rgba(54, 16, 90, 0.94);
+    --border: rgba(224, 64, 251, 0.4);
+    --orange: #f97316;
+    --green: #22c55e;
+    --green-hover: #16a34a;
+    --red: #ef4444;
+    --red-hover: #dc2626;
+    --text: #ffffff;
+    --muted: #bca8c8;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body, html {
+    background: var(--bg-gradient);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    min-height: 100vh;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+    user-select: none;
+  }
+
+  .wave-container {
+    position: absolute;
+    bottom: -10%;
+    left: 0;
+    width: 100%;
+    height: 70%;
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  .bubble {
+    position: absolute;
+    background: rgba(255, 255, 255, 0.16);
+    border-radius: 50%;
+    pointer-events: none;
+    box-shadow: inset 0 0 5px rgba(255,255,255,0.22);
+    z-index: 2;
+  }
+
+  .container {
+    position: relative;
+    width: 100%;
+    max-width: 480px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    z-index: 10;
+    padding: 24px;
+  }
+
+  h1 {
+    color: var(--text);
+    font-size: 26px;
+    text-align: center;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.4);
+  }
+
+  .card {
+    background: var(--panel);
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    border: 2px solid var(--border);
+    transition: border-color 0.3s;
+    box-shadow: 2px 3px 0px rgba(0, 0, 0, 0.5);
+  }
+  .card.installed  { border-color: #22c55e; }
+  .card.not-installed { border-color: var(--border); }
+  .card.checking   { border-color: var(--border); }
+
+  .card img {
+    width: 56px; height: 56px;
+    border-radius: 10px;
+    object-fit: contain;
+    flex-shrink: 0;
+    background: #111;
+  }
+  .card-body { flex: 1; }
+  .card-name { font-weight: 700; font-size: 17px; }
+  .card-status {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+  .badge {
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .badge-installed     { background: #22c55e; color: #fff; }
+  .badge-not-installed { background: rgba(255, 255, 255, 0.15); color: var(--muted); }
+  .badge-checking      { background: rgba(255, 255, 255, 0.15); color: var(--muted); }
+
+  .btn {
+    width: 100%;
+    padding: 18px;
+    font-size: 18px;
+    font-weight: 700;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    cursor: pointer;
+    color: #fff;
+    box-shadow: 2px 3px 0px rgba(0, 0, 0, 0.5);
+    transition: background 0.15s, opacity 0.15s, border-color 0.15s;
+  }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-green { background: var(--green); }
+  .btn-green:hover:not(:disabled) { background: var(--green-hover); border-color: #fff; }
+  .btn-red   { background: var(--red); }
+  .btn-red:hover:not(:disabled)   { background: var(--red-hover); border-color: #fff; }
+
+  .hidden { display: none !important; }
+
+  #toast {
+    position: fixed;
+    top: 24px; left: 50%;
+    transform: translateX(-50%);
+    padding: 14px 24px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 700;
+    color: #ebd0ff;
+    display: none;
+    z-index: 999;
+    max-width: 90%;
+    text-align: center;
+    border: 1px solid #e040fb;
+    background: rgba(54, 16, 90, 0.95);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  }
+  #toast.success { background: rgba(34, 197, 94, 0.95); color: #fff; border-color: #22c55e; }
+  #toast.error   { background: rgba(239, 68, 68, 0.95); color: #fff; border-color: #ef4444; }
+  #toast.info    { background: rgba(54, 16, 90, 0.95); }
+</style>
+</head>
+<body>
+
+<svg class="wave-container" viewBox="0 0 400 200" preserveAspectRatio="none">
+    <path id="wave1" fill="rgba(255,255,255,0.16)"></path>
+    <path id="wave2" fill="rgba(110, 40, 175, 0.55)"></path>
+    <path id="wave3" fill="rgba(75, 20, 135, 0.9)"></path>
+</svg>
+
+<div id="toast"></div>
+
+<div class="container">
+
+  <div>
+    <h1>The Homebrew Launcher</h1>
+  </div>
+
+  <div class="card checking" id="card">
+    <img src="https://raw.githubusercontent.com/mrdingus89/mrdingus89.github.io/refs/heads/main/TheHomebrewLauncher.png" alt="The Homebrew Launcher icon">
+    <div class="card-body">
+      <div class="card-name">The Homebrew Launcher</div>
+      <div class="card-status" id="cardStatus">Checking install status...</div>
+    </div>
+    <span class="badge badge-checking" id="badge">…</span>
+  </div>
+
+  <button class="btn btn-green hidden" id="installBtn">Install</button>
+  <button class="btn btn-red hidden"   id="uninstallBtn">Uninstall</button>
+
+</div>
+
+<script>
+  const APP = {
+    id:   'homebrew-launcher',
+    name: 'The Homebrew Launcher',
+    url:  'https://mrdingus89.github.io/launcher/',
+    icon: 'https://raw.githubusercontent.com/mrdingus89/mrdingus89.github.io/refs/heads/main/TheHomebrewLauncher.png',
+  };
+
+  const HIUTILS  = 'HiUtils_createRequest';
+  const APPINFO  = 'websdk/Appinfo.json';
+  const MODE     = 6;
+
+  const card         = document.getElementById('card');
+  const cardStatus   = document.getElementById('cardStatus');
+  const badge        = document.getElementById('badge');
+  const installBtn   = document.getElementById('installBtn');
+  const uninstallBtn = document.getElementById('uninstallBtn');
+  const toastEl      = document.getElementById('toast');
+
+  let busy = false;
+
+  function hiutils() {
+    return typeof window[HIUTILS] === 'function' ? window[HIUTILS] : null;
+  }
+
+  function isLegacyInstallAvailable() {
+    return typeof window.Hisense_installApp !== 'undefined';
+  }
+
+  function getDate() {
+    return new Date().toISOString().split('T')[0];
+  }
+
+  function toast(msg, type) {
+    toastEl.textContent = msg;
+    toastEl.className = type;
+    toastEl.style.display = 'block';
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => { toastEl.style.display = 'none'; }, 4000);
+  }
+
+  function setBusy(val) {
+    busy = val;
+    installBtn.disabled = val;
+    uninstallBtn.disabled = val;
+  }
+
+  function checkStatus() {
+    const fn = hiutils();
+    if (!fn) {
+      setStatus('not-installed', 'API not available on this device', 'Unknown');
+      return;
+    }
+    try {
+      const res = fn('fileRead', { path: APPINFO, mode: MODE });
+      if (!res.ret) { setStatus('not-installed', 'Could not read app list', 'Unknown'); return; }
+      const apps = JSON.parse(res.msg);
+      const found = apps.AppInfo.find(a => a.Id === APP.id);
+      if (found) {
+        setStatus('installed', `Installed${found.InstallTime ? ' · ' + found.InstallTime : ''}`, 'Installed');
+      } else {
+        setStatus('not-installed', 'Not currently installed', 'Not Installed');
+      }
+    } catch(e) {
+      setStatus('not-installed', 'Error reading status', 'Error');
+    }
+  }
+
+  function setStatus(state, sub, badgeText) {
+    card.className = 'card ' + state;
+    cardStatus.textContent = sub;
+    badge.textContent = badgeText;
+    badge.className = 'badge ' + (state === 'installed' ? 'badge-installed' : 'badge-not-installed');
+
+    if (state === 'installed') {
+      uninstallBtn.classList.remove('hidden');
+      installBtn.classList.add('hidden');
+    } else {
+      installBtn.classList.remove('hidden');
+      uninstallBtn.classList.add('hidden');
+    }
+  }
+
+  async function doInstall() {
+    if (busy) return;
+    setBusy(true);
+    toast('Installing…', 'info');
+    try {
+      let ok = false;
+      const fn = hiutils();
+
+      if (fn) {
+        try {
+          const cur = fn('fileRead', { path: APPINFO, mode: MODE });
+          const data = cur.ret ? JSON.parse(cur.msg) : { AppInfo: [] };
+          const entry = {
+            Id: APP.id, AppName: APP.name, Title: APP.name,
+            URL: APP.url, StartCommand: APP.url,
+            IconURL: APP.icon, Icon_96: APP.icon, Image: APP.icon, Thumb: APP.icon,
+            Type: 'Browser', InstallTime: getDate(),
+            RunTimes: 0, StoreType: 'custom', PreInstall: false,
+          };
+          const idx = data.AppInfo.findIndex(a => a.Id === APP.id);
+          if (idx >= 0) data.AppInfo[idx] = entry; else data.AppInfo.push(entry);
+          const w = fn('fileWrite', { path: APPINFO, mode: MODE, writedata: JSON.stringify(data) });
+          ok = !!w.ret;
+        } catch(e) { ok = false; }
+      }
+
+      if (!ok && isLegacyInstallAvailable()) {
+        ok = await new Promise(resolve => {
+          try {
+            window.Hisense_installApp(
+              APP.id, APP.name, APP.icon, APP.icon, APP.icon, APP.url, 'store',
+              res => resolve(res === 0)
+            );
+          } catch(e) { resolve(false); }
+        });
+      }
+
+      if (ok) {
+        toast('Installed! Please Restart your TV.', 'success');
+        checkStatus();
+      } else {
+        toast('Install failed, check TV API availability.', 'error');
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function doUninstall() {
+    if (busy) return;
+    setBusy(true);
+    toast('Uninstalling...', 'info');
+    try {
+      let ok = false;
+      const fn = hiutils();
+
+      if (fn) {
+        try {
+          const cur = fn('fileRead', { path: APPINFO, mode: MODE });
+          if (cur.ret) {
+            const data = JSON.parse(cur.msg);
+            const idx = data.AppInfo.findIndex(a => a.Id === APP.id);
+            if (idx >= 0) {
+              data.AppInfo.splice(idx, 1);
+              const w = fn('fileWrite', { path: APPINFO, mode: MODE, writedata: JSON.stringify(data) });
+              ok = !!w.ret;
+            }
+          }
+        } catch(e) { ok = false; }
+      }
+
+      if (!ok && typeof window.Hisense_uninstallApp !== 'undefined') {
+        ok = await new Promise(resolve => {
+          try {
+            window.Hisense_uninstallApp(APP.id, status => resolve(!!status));
+          } catch(e) { resolve(false); }
+        });
+      }
+
+      if (ok) {
+        toast('Uninstalled! Please Restart your TV.', 'success');
+        checkStatus();
+      } else {
+        toast('Uninstall failed, app may not be installed.', 'error');
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  installBtn.addEventListener('click', doInstall);
+  uninstallBtn.addEventListener('click', doUninstall);
+
+  checkStatus();
+
+  const bubbleCount = 35;
+  const bubbles = [];
+
+  for (let i = 0; i < bubbleCount; i++) {
+    const b = {
+      x: Math.random() * window.innerWidth,
+      y: window.innerHeight * 0.45 + Math.random() * (window.innerHeight * 0.55),
+      angle: Math.random(),
+      angv: 0.01 + Math.random() * 0.02,
+      size: 10 + Math.random() * 25,
+      speed: 1 + Math.random() * 1.5,
+      element: document.createElement('div')
+    };
+    b.element.className = 'bubble';
+    b.element.style.width = `${b.size}px`;
+    b.element.style.height = `${b.size}px`;
+    document.body.appendChild(b.element);
+    bubbles.push(b);
+  }
+
+  let waveCurves = [
+    { phase: Math.random(), amplitude: 25, velocity: 1.2 },
+    { phase: Math.random(), amplitude: 18, velocity: 2.0 },
+    { phase: Math.random(), amplitude: 12, velocity: 2.7 }
+  ];
+
+  let waveHeights = new Array(32).fill(60);
+
+  function updateWaves() {
+    const numPoints = 32;
+    let points1 = [], points2 = [], points3 = [];
+
+    for (let i = 0; i < numPoints; i++) {
+        let x = i / (numPoints - 1);
+        let y1 = 40, y2 = 30, y3 = 20;
+        
+        for (let j = 0; j < waveCurves.length; j++) {
+            let ampl = waveCurves[j].amplitude;
+            let angle = 2 * Math.PI * (waveCurves[j].velocity * x + waveCurves[j].phase);
+            y1 += 0.5 * ampl * Math.sin(angle);
+            y2 += 0.4 * ampl * Math.cos(angle);
+            y3 += 0.6 * ampl * Math.sin(angle * 0.8);
+        }
+        
+        let finalY3 = y3 + 40;
+        waveHeights[i] = finalY3;
+
+        let xp = x * 400;
+        points1.push(`${xp},${y1}`);
+        points2.push(`${xp},${y2 + 20}`);
+        points3.push(`${xp},${finalY3}`);
+    }
+
+    document.getElementById('wave1').setAttribute('d', `M 0 200 L ${points1.join(' L ')} L 400 200 Z`);
+    document.getElementById('wave2').setAttribute('d', `M 0 200 L ${points2.join(' L ')} L 400 200 Z`);
+    document.getElementById('wave3').setAttribute('d', `M 0 200 L ${points3.join(' L ')} L 400 200 Z`);
+
+    for (let j = 0; j < waveCurves.length; j++) {
+        waveCurves[j].phase += waveCurves[j].velocity / 250.0;
+    }
+  }
+
+  function animate() {
+    updateWaves();
+
+    for (let i = 0; i < bubbles.length; i++) {
+        let b = bubbles[i];
+        b.y -= b.speed;
+
+        b.angle += b.angv;
+        let xPos = b.x + Math.sin(2 * Math.PI * b.angle) * 15;
+
+        let normalizedX = Math.max(0, Math.min(window.innerWidth, xPos)) / window.innerWidth;
+        let waveIndex = Math.floor(normalizedX * (waveHeights.length - 1));
+        let surfaceY = window.innerHeight * 0.4 + (waveHeights[waveIndex] / 200) * (window.innerHeight * 0.7);
+
+        if (b.y < surfaceY) {
+            b.y = window.innerHeight + 50;
+            b.x = Math.random() * window.innerWidth;
+        }
+
+        b.element.style.transform = `translate(${xPos}px, ${b.y}px)`;
+    }
+
+    requestAnimationFrame(animate);
+  }
+
+  requestAnimationFrame(animate);
+</script>
+
+</body>
+</html>
