@@ -76,7 +76,6 @@
             padding: 12px 22px; border-radius: 10px; font-size: 18px; font-weight: 600; cursor: pointer;
             display: flex; align-items: center; gap: 8px;
             box-shadow: 2px 3px 0px rgba(0, 0, 0, 0.5);
-            transition: border-color 0.2s;
         }
         .top-return-btn:hover { border-color: #ab47bc; }
         .top-return-btn.selected { 
@@ -110,7 +109,6 @@
             display: flex; flex-direction: column; justify-content: space-between; cursor: pointer;
             height: 250px;
             box-shadow: 2px 3px 0px rgba(0, 0, 0, 0.65);
-            transition: border-color 0.2s;
         }
         .card:hover { border-color: #ab47bc; }
         .card.selected { 
@@ -168,7 +166,6 @@
 <body>
 
 <div class="screen" id="appScreen">
-    <!-- Toast Alert is now placed at the root level of the screen container so it stays completely above modal overlays -->
     <div class="toast-alert" id="toastAlert"></div>
 
     <div class="container">
@@ -445,7 +442,6 @@
         const ip = configIpInput.value.trim();
         const port = configPortInput.value.trim();
         
-        // Validation check for self-hosted IP and Port
         if (!ip && !port) {
             showToast("IP Address and Port is required!");
             return;
