@@ -47,7 +47,7 @@
         }
 
         .toast-alert {
-            position: absolute;
+            position: fixed;
             top: 15px;
             left: 50%;
             transform: translateX(-50%);
@@ -60,7 +60,7 @@
             font-weight: 600;
             box-shadow: 0 4px 12px rgba(0,0,0,0.5);
             display: none;
-            z-index: 50;
+            z-index: 300;
         }
 
         .logo {
@@ -465,8 +465,6 @@
 <div class="screen" id="app">
     <div class="hud">
         <div class="time" id="timeElement"></div>
-        <div class="toast-alert" id="toastAlert"></div>
-
         <div class="logo" id="logo">
             <h1>the</h1>
             <h2>homebrew</h2>
@@ -481,6 +479,8 @@
         </div>
     </div>
 </div>
+
+<div class="toast-alert" id="toastAlert"></div>
 
 <div class="modal-overlay" id="modal">
     <div class="modal">
@@ -919,7 +919,7 @@
                 return;
             }
 
-            if (e.key === 'ArrowDown' || e.key === 'Tab') {
+            if (e.key === `ArrowDown` || e.key === 'Tab') {
                 if (modalIndex < 6) {
                     modalIndex++;
                     updateModalFocus();
