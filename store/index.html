@@ -223,6 +223,8 @@
     </div>
 </div>
 
+<audio id="bgMusic" src="audio/background.mp3" loop></audio>
+
 <script>
     let apps = [];
     let selectedIndex = 0;
@@ -248,6 +250,21 @@
     const configPortInput = document.getElementById('configPortInput');
     const configCancelBtn = document.getElementById('configCancelBtn');
     const configConfirmBtn = document.getElementById('configConfirmBtn');
+
+    const bgMusic = document.getElementById('bgMusic');
+
+    function initAudio() {
+        const savedMusicTime = localStorage.getItem('homebrew_music_time');
+        if (savedMusicTime) {
+            bgMusic.currentTime = parseFloat(savedMusicTime);
+        }
+        bgMusic.volume = 0.4;
+        bgMusic.play().catch(() => {});
+    }
+
+    window.addEventListener('beforeunload', () => {
+        localStorage.setItem('homebrew_music_time', bgMusic.currentTime);
+    });
 
     async function loadAppsFromDirectory() {
         try {
@@ -502,10 +519,13 @@
     }
 
     function goBack() {
+        localStorage.setItem('homebrew_music_time', bgMusic.currentTime);
         window.location.href = 'index.html';
     }
 
     window.addEventListener('keydown', (e) => {
+        initAudio();
+
         if (activeModal === 'remove') {
             if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
                 removeModalButtonIndex = removeModalButtonIndex === 0 ? 1 : 0;
@@ -537,13 +557,11 @@
             if (e.key === 'ArrowDown') {
                 if (configFocusIndex === 0) configFocusIndex = 1;
                 else if (configFocusIndex === 1) configFocusIndex = 2;
-                else if (configFocusIndex === 2 || configFocusIndex === 3) configFocusIndex = 0;
                 updateConfigFocus();
                 e.preventDefault();
             } else if (e.key === 'ArrowUp') {
                 if (configFocusIndex === 2 || configFocusIndex === 3) configFocusIndex = 1;
                 else if (configFocusIndex === 1) configFocusIndex = 0;
-                else if (configFocusIndex === 0) configFocusIndex = 3;
                 updateConfigFocus();
                 e.preventDefault();
             } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
@@ -622,6 +640,7 @@
     }
 
     loadAppsFromDirectory();
+    initAudio();
 </script>
 
 </body>
