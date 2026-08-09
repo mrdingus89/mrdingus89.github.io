@@ -280,11 +280,16 @@
                 if (!res.ok) throw new Error(`Failed to load ${appUrl}`);
                 const appData = await res.json();
                 
-                let resolvedIcon = appData.iconUrl || appData.icon || '📦';
-                if (resolvedIcon.startsWith('./')) {
-                    resolvedIcon = `apps/${folderName}/${resolvedIcon.substring(2)}`;
-                } else if (!resolvedIcon.startsWith('http://') && !resolvedIcon.startsWith('https://') && !resolvedIcon.startsWith('/')) {
-                    resolvedIcon = `apps/${folderName}/${resolvedIcon}`;
+                let rawIcon = appData.iconUrl || appData.icon || '📦';
+                let resolvedIcon = rawIcon;
+                if (rawIcon.startsWith('./')) {
+                    resolvedIcon = new URL(`apps/${folderName}/${rawIcon.substring(2)}`, window.location.href).href;
+                } else if (rawIcon.startsWith('http://') || rawIcon.startsWith('https://')) {
+                    resolvedIcon = rawIcon;
+                } else if (rawIcon.startsWith('/')) {
+                    resolvedIcon = new URL(rawIcon, window.location.origin).href;
+                } else {
+                    resolvedIcon = new URL(`apps/${folderName}/${rawIcon}`, window.location.href).href;
                 }
                 appData._resolvedIcon = resolvedIcon;
                 return appData;
@@ -318,9 +323,6 @@
 
     function renderIcon(iconValue) {
         if (!iconValue) return '📦';
-        if (iconValue.startsWith('http://') || iconValue.startsWith('https://') || iconValue.startsWith('./') || iconValue.startsWith('/')) {
-            return `<img src="${iconValue}" alt="icon">`;
-        }
         return `<img src="${iconValue}" alt="icon">`;
     }
 
@@ -644,7 +646,7 @@
 
     modalCancelBtn.onclick = () => closeRemoveModal();
     modalConfirmBtn.onclick = () => confirmRemoval();
-    configCancelBtn.onclick = () => closeConfigModal();
+    configCancelBtn.onclick = () => closeConfigManager();
     configConfirmBtn.onclick = () => submitConfigInstall();
 
     const container = document.getElementById('appScreen');
