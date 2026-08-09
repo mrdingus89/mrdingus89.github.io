@@ -251,14 +251,14 @@
 
     async function loadAppsFromDirectory() {
         try {
-            const manifestResponse = await fetch('app/manifest.json');
+            const manifestResponse = await fetch('apps/manifest.json');
             if (!manifestResponse.ok) throw new Error('Manifest not found');
             
             const entries = await manifestResponse.json();
             
             const appPromises = entries.map(async (entry) => {
                 const folderName = entry.replace(/\.json$/i, '').replace(/\/$/, '');
-                const appUrl = `app/${folderName}/app.json`;
+                const appUrl = `apps/${folderName}/app.json`;
                 const res = await fetch(appUrl);
                 if (!res.ok) throw new Error(`Failed to load ${appUrl}`);
                 return await res.json();
