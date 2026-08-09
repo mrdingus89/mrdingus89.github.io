@@ -183,6 +183,8 @@
 
 </div>
 
+<audio id="music" src="./bgMusic.mp3" preload="auto" loop></audio>
+
 <script>
   const APP = {
     id:   'homebrew-launcher',
@@ -201,8 +203,25 @@
   const installBtn   = document.getElementById('installBtn');
   const uninstallBtn = document.getElementById('uninstallBtn');
   const toastEl      = document.getElementById('toast');
+  const music        = document.getElementById('music');
 
   let busy = false;
+
+  function startMusic() {
+      if (music.paused) {
+          music.currentTime = 0;
+          music.play().catch(() => {});
+      }
+      window.removeEventListener('click', startMusic);
+      window.removeEventListener('keydown', startMusic);
+  }
+  window.addEventListener('click', startMusic);
+  window.addEventListener('keydown', startMusic);
+
+  window.addEventListener('pageshow', () => {
+      music.currentTime = 0;
+      music.play().catch(() => {});
+  });
 
   function hiutils() {
     return typeof window[HIUTILS] === 'function' ? window[HIUTILS] : null;
@@ -360,6 +379,7 @@
   uninstallBtn.addEventListener('click', doUninstall);
 
   checkStatus();
+  music.play().catch(() => {});
 
   const bubbleCount = 35;
   const bubbles = [];
