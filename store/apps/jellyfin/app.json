@@ -1,0 +1,7 @@
+{
+    "title": "Jellyfin",
+    "desc": "The Free Software Media System",
+    "author": "Jellyfin Project",
+    "selfHosted": true,
+    "iconUrl": "./appIcon.png"
+}
