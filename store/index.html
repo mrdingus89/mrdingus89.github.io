@@ -274,22 +274,17 @@
             const entries = await manifestResponse.json();
             
             const appPromises = entries.map(async (entry) => {
-                const cleanEntry = entry.replace(/^\//, '').replace(/\.json$/i, '');
-                const appUrl = `apps/${cleanEntry}/appInfo.json`;
+                const folderName = entry.replace(/\.json$/i, '').replace(/\/$/, '');
+                const appUrl = `apps/${folderName}/appInfo.json`;
                 const res = await fetch(appUrl);
                 if (!res.ok) throw new Error(`Failed to load ${appUrl}`);
                 const appData = await res.json();
                 
-                let rawIcon = appData.iconUrl || appData.icon || '📦';
-                let resolvedIcon = rawIcon;
-                
-                if (rawIcon.startsWith('http://') || rawIcon.startsWith('https://')) {
-                    resolvedIcon = rawIcon;
-                } else if (rawIcon.startsWith('/')) {
-                    resolvedIcon = new URL(rawIcon, window.location.origin).href;
-                } else {
-                    const cleanPath = rawIcon.replace(/^\.\//, '');
-                    resolvedIcon = new URL(`apps/${cleanEntry}/${cleanPath}`, window.location.href).href;
+                let resolvedIcon = appData.iconUrl || appData.icon || '📦';
+                if (resolvedIcon.startsWith('./')) {
+                    resolvedIcon = `apps/${folderName}/${resolvedIcon.substring(2)}`;
+                } else if (!resolvedIcon.startsWith('http://') && !resolvedIcon.startsWith('https://') && !resolvedIcon.startsWith('/')) {
+                    resolvedIcon = `apps/${folderName}/${resolvedIcon}`;
                 }
                 appData._resolvedIcon = resolvedIcon;
                 return appData;
@@ -323,6 +318,9 @@
 
     function renderIcon(iconValue) {
         if (!iconValue) return '📦';
+        if (iconValue.startsWith('http://') || iconValue.startsWith('https://') || iconValue.startsWith('./') || iconValue.startsWith('/')) {
+            return `<img src="${iconValue}" alt="icon">`;
+        }
         return `<img src="${iconValue}" alt="icon">`;
     }
 
