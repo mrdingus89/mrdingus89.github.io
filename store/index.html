@@ -274,22 +274,22 @@
             const entries = await manifestResponse.json();
             
             const appPromises = entries.map(async (entry) => {
-                const folderName = entry.replace(/\.json$/i, '').replace(/\/$/, '');
-                const appUrl = `apps/${folderName}/appInfo.json`;
+                const cleanEntry = entry.replace(/^\//, '').replace(/\.json$/i, '');
+                const appUrl = `apps/${cleanEntry}/appInfo.json`;
                 const res = await fetch(appUrl);
                 if (!res.ok) throw new Error(`Failed to load ${appUrl}`);
                 const appData = await res.json();
                 
                 let rawIcon = appData.iconUrl || appData.icon || '📦';
                 let resolvedIcon = rawIcon;
-                if (rawIcon.startsWith('./')) {
-                    resolvedIcon = new URL(`${folderName}/${rawIcon.substring(2)}`, new URL('apps/', window.location.href)).href;
-                } else if (rawIcon.startsWith('http://') || rawIcon.startsWith('https://')) {
+                
+                if (rawIcon.startsWith('http://') || rawIcon.startsWith('https://')) {
                     resolvedIcon = rawIcon;
                 } else if (rawIcon.startsWith('/')) {
                     resolvedIcon = new URL(rawIcon, window.location.origin).href;
                 } else {
-                    resolvedIcon = new URL(`${folderName}/${rawIcon}`, new URL('apps/', window.location.href)).href;
+                    const cleanPath = rawIcon.replace(/^\.\//, '');
+                    resolvedIcon = new URL(`apps/${cleanEntry}/${cleanPath}`, window.location.href).href;
                 }
                 appData._resolvedIcon = resolvedIcon;
                 return appData;
