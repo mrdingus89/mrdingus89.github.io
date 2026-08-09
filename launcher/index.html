@@ -72,6 +72,16 @@
             color: #ffffff;
             text-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
             pointer-events: none;
+            will-change: transform;
+            animation: dvdFloat 12s ease-in-out infinite alternate;
+        }
+
+        @keyframes dvdFloat {
+            0% { transform: translate(-50%, -50%) translate3d(0px, 0px, 0px); }
+            25% { transform: translate(-50%, -50%) translate3d(18px, -12px, 0px); }
+            50% { transform: translate(-50%, -50%) translate3d(-15px, 10px, 0px); }
+            75% { transform: translate(-50%, -50%) translate3d(12px, 15px, 0px); }
+            100% { transform: translate(-50%, -50%) translate3d(-18px, -10px, 0px); }
         }
 
         .logo h1 {
@@ -162,6 +172,11 @@
             cursor: pointer;
             border: 2px solid rgba(75, 35, 105, 0.85);
             box-sizing: border-box;
+            will-change: border-color;
+        }
+
+        .app-card:hover {
+            border-color: #ab47bc;
         }
 
         .app-card.selected {
@@ -174,6 +189,9 @@
         .app-card.add-card {
             background: rgba(20, 10, 34, 0.7);
             border: 2px dashed rgba(100, 50, 130, 0.7);
+        }
+        .app-card.add-card:hover {
+            border-color: #ab47bc;
         }
 
         .app-card.add-card.selected {
@@ -247,6 +265,7 @@
         .app-desc-inner {
             display: inline-block;
             white-space: nowrap;
+            will-change: transform;
         }
 
         .app-card.overflowing.selected .app-desc-inner,
@@ -290,6 +309,10 @@
             border-radius: 4px;
             cursor: pointer;
             box-shadow: 1px 1px 0px rgba(0,0,0,0.3);
+        }
+
+        .custom-scroll-thumb:hover {
+            background: #ffffff;
         }
 
         .modal-overlay {
@@ -576,10 +599,7 @@
             items = [];
             save();
         }
-        renderOnce();
-        
-        // Auto-start music logic restored
-        music.play().catch(() => {});
+        render();
     }
 
     function save() {
@@ -605,7 +625,7 @@
         });
         save();
         selectedIndex = items.length; 
-        renderOnce();
+        render();
     }
 
     function removeItem(index) {
@@ -615,7 +635,7 @@
         if (selectedIndex >= getCount()) {
             selectedIndex = Math.max(0, getCount() - 1);
         }
-        renderOnce();
+        render();
         showToast(`Successfully removed ${removedTitle}`);
     }
 
@@ -652,14 +672,19 @@
         }
     }
 
-    function renderOnce() {
+    function render() {
         list.innerHTML = '';
+
         const allItems = [storeItem, ...items];
+        const totalItems = getCount();
+
+        if (selectedIndex >= totalItems) {
+            selectedIndex = Math.max(0, totalItems - 1);
+        }
 
         allItems.forEach((item, index) => {
             const card = document.createElement('div');
-            card.className = 'app-card';
-            card.dataset.index = index;
+            card.className = `app-card ${index === selectedIndex ? 'selected' : ''}`;
             
             card.onclick = () => {
                 selectedIndex = index;
@@ -691,8 +716,7 @@
 
         const addIndex = allItems.length;
         const addCard = document.createElement('div');
-        addCard.className = 'app-card add-card';
-        addCard.dataset.index = addIndex;
+        addCard.className = `app-card add-card ${addIndex === selectedIndex ? 'selected' : ''}`;
         
         addCard.onclick = () => {
             selectedIndex = addIndex;
@@ -714,7 +738,6 @@
 
         updateScrollbar();
         checkOverflows();
-        updateSelection();
     }
 
     function checkOverflows() {
