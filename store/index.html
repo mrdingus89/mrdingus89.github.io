@@ -235,6 +235,7 @@
 
     let configFocusIndex = 0;
     let isEditingInput = false;
+    let isAudioInitialized = false;
 
     const grid = document.getElementById('appGrid');
     const topReturnBtn = document.getElementById('topReturnBtn');
@@ -254,12 +255,15 @@
     const bgMusic = document.getElementById('bgMusic');
 
     function initAudio() {
+        if (isAudioInitialized) return;
         const savedMusicTime = localStorage.getItem('homebrew_music_time');
         if (savedMusicTime) {
             bgMusic.currentTime = parseFloat(savedMusicTime);
         }
         bgMusic.volume = 0.4;
-        bgMusic.play().catch(() => {});
+        bgMusic.play().then(() => {
+            isAudioInitialized = true;
+        }).catch(() => {});
     }
 
     window.addEventListener('beforeunload', () => {
@@ -533,7 +537,9 @@
     }
 
     window.addEventListener('keydown', (e) => {
-        initAudio();
+        if (bgMusic.paused) {
+            bgMusic.play().catch(() => {});
+        }
 
         if (activeModal === 'remove') {
             if (e.key === 'ArrowLeft') {
