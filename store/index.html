@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Homebrew App Store</title>
+    <style>
+        * { box-sizing: border-box; }
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            background-color: #000; color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            overflow: hidden; user-select: none;
+        }
+
+        .screen {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background: linear-gradient(180deg, #3d1b5c 0%, #0a0114 100%);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .bubble {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 50%;
+            pointer-events: none;
+            box-shadow: inset 0 0 5px rgba(255,255,255,0.1);
+            z-index: 1;
+            will-change: transform, opacity;
+            animation: riseUp var(--duration) linear infinite;
+            animation-delay: var(--delay);
+            bottom: -50px;
+        }
+
+        @keyframes riseUp {
+            0% {
+                transform: translate3d(0, 0, 0);
+                opacity: 0;
+            }
+            10% {
+                opacity: 0.7;
+            }
+            90% {
+                opacity: 0.7;
+            }
+            100% {
+                transform: translate3d(0, calc(-100vh - 100px), 0);
+                opacity: 0;
+            }
+        }
+
+        .container { 
+            display: flex; 
+            flex-direction: column; 
+            width: 100vw; 
+            height: 100vh; 
+            padding: 40px 60px; 
+            z-index: 10;
+            position: relative;
+        }
+
+        .header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 25px; border-bottom: 1px solid rgba(75, 35, 105, 0.5); padding-bottom: 20px; position: relative;
+        }
+        .header h1 { margin: 0; font-size: 32px; font-weight: 700; letter-spacing: -0.5px; text-shadow: 0 2px 4px rgba(0,0,0,0.4); }
+        
+        .top-return-btn {
+            background: rgba(30, 12, 48, 0.8); 
+            border: 2px solid rgba(75, 35, 105, 0.85); 
+            color: #bca8c8;
+            padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer;
+            display: flex; align-items: center; gap: 8px;
+            box-shadow: 2px 3px 0px rgba(0, 0, 0, 0.5);
+            transition: border-color 0.2s;
+        }
+        .top-return-btn:hover { border-color: #ab47bc; }
+        .top-return-btn.selected { 
+            border: 2px solid #e040fb;
+            outline: 2px solid #e040fb;
+            outline-offset: -2px;
+            background: rgba(54, 16, 90, 0.95);
+            color: #ffffff; 
+        }
+
+        .toast-alert {
+            position: absolute; top: -15px; left: 50%; transform: translateX(-50%);
+            background: rgba(54, 16, 90, 0.95); border: 1px solid #e040fb; color: #ebd0ff;
+            padding: 8px 20px; border-radius: 8px; font-size: 13px; font-weight: 600;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5); display: none; z-index: 50;
+        }
+
+        .grid {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
+            flex-grow: 1; overflow-y: auto; padding-bottom: 20px; align-content: start;
+        }
+        .grid::-webkit-scrollbar { display: none; }
+        .loading-text, .error-text { grid-column: 1 / -1; text-align: center; padding: 40px; font-size: 16px; font-weight: 600; }
+        .loading-text { color: #bca8c8; }
+        .error-text { color: #ff6b6b; }
+        
+        .card {
+            background: rgba(30, 12, 48, 0.85); 
+            border: 2px solid rgba(75, 35, 105, 0.85); 
+            border-radius: 12px; padding: 20px;
+            display: flex; flex-direction: column; justify-content: space-between; cursor: pointer;
+            height: 200px;
+            box-shadow: 2px 3px 0px rgba(0, 0, 0, 0.65);
+            transition: border-color 0.2s;
+        }
+        .card:hover { border-color: #ab47bc; }
+        .card.selected { 
+            border: 2px solid #e040fb;
+            outline: 2px solid #e040fb;
+            outline-offset: -2px;
+            background: rgba(45, 15, 75, 0.95); 
+        }
+
+        .card-top { display: flex; align-items: flex-start; gap: 14px; }
+        .card-icon {
+            width: 48px; height: 48px; min-width: 48px; min-height: 48px;
+            border-radius: 10px; background: rgba(20, 10, 34, 0.9); display: flex; align-items: center;
+            justify-content: center; font-size: 22px; border: 1px solid rgba(255, 255, 255, 0.15); overflow: hidden;
+        }
+        .card-icon img {
+            width: 100%; height: 100%; object-fit: cover; aspect-ratio: 1 / 1; display: block;
+        }
+        .card-title-group { overflow: hidden; }
+        .card-title { font-size: 16px; font-weight: 600; margin: 0 0 2px 0; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .card-author { font-size: 11px; color: #9880a8; font-style: italic; }
+        .card-desc { font-size: 12px; color: #bca8c8; margin: 0; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        
+        .card-action { display: flex; align-items: center; justify-content: space-between; border-top: 1px solid rgba(75, 35, 105, 0.5); padding-top: 10px; font-size: 12px; font-weight: 600; color: #ebd0ff; }
+        .card.selected .card-action { color: #f3e5ff; }
+        .card.installed .card-action { color: #4ade80; }
+
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(20, 5, 35, 0.85); z-index: 100; display: none; align-items: center; justify-content: center; }
+        .modal-box { width: 380px; background: rgba(54, 16, 90, 0.98); border: 2px solid rgba(255, 255, 255, 0.35); border-radius: 16px; padding: 24px; box-shadow: 0 15px 35px rgba(0,0,0,0.65); color: #fff; }
+        .modal-title { font-size: 18px; font-weight: 600; margin: 0 0 8px 0; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+        .modal-desc { font-size: 13px; color: #bca8c8; margin: 0 0 16px 0; line-height: 1.4; }
+        
+        .input-group { margin-bottom: 12px; }
+        .input-group label { display: block; font-size: 12px; color: rgba(255, 255, 255, 0.9); margin-bottom: 4px; font-weight: 600; text-shadow: 0 1px 2px rgba(0,0,0,0.3); }
+        .modal-input {
+            width: 100%; background: rgba(38, 10, 68, 0.6); border: 2px solid rgba(255, 255, 255, 0.35); border-radius: 8px;
+            padding: 8px 12px; color: #fff; font-size: 14px; outline: none;
+        }
+        .modal-input.focused { border-color: #ffffff; background: rgba(50, 14, 85, 0.85); }
+        .modal-input.editing { border-color: #4ade80; background: rgba(6, 35, 24, 0.85); }
+
+        .modal-buttons { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+        .modal-btn { padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: 2px solid rgba(255, 255, 255, 0.35); }
+        .modal-btn.cancel { background: rgba(38, 10, 68, 0.6); color: #fff; }
+        .modal-btn.confirm { background: rgba(95, 28, 148, 0.9); color: #fff; }
+        .modal-btn.focused { border-color: #ffffff; outline: 2px solid #ffffff; outline-offset: -2px; }
+
+        .loading-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(20, 5, 35, 0.85); z-index: 100; display: none; align-items: center; justify-content: center; }
+        .loading-box { width: 340px; background: rgba(54, 16, 90, 0.98); border: 2px solid rgba(255, 255, 255, 0.4); border-radius: 12px; padding: 24px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.65); }
+        .loading-title { font-size: 15px; font-weight: 600; margin-bottom: 16px; color: #fff; }
+        .progress-track { width: 100%; height: 12px; background: rgba(25, 6, 45, 0.7); border-radius: 6px; overflow: hidden; border: 1px solid rgba(255, 255, 255, 0.25); box-shadow: inset 0 2px 4px rgba(0,0,0,0.5); }
+        .progress-fill { width: 0%; height: 100%; background: #ebd0ff; border-radius: 4px; transition: width 0.15s ease-in-out; }
+    </style>
+</head>
+<body>
+
+<div class="screen" id="appScreen">
+    <div class="container">
+        <div class="header">
+            <div class="toast-alert" id="toastAlert"></div>
+            <h1>Available Packages</h1>
+            <button class="top-return-btn" id="topReturnBtn">
+                <span>← Return</span>
+            </button>
+        </div>
+        <div class="grid" id="appGrid">
+            <div class="loading-text">Loading packages...</div>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="removeModal">
+    <div class="modal-box">
+        <div class="modal-title">Remove Package</div>
+        <div class="modal-desc" id="removeModalText">Are you sure you want to remove this package from your launcher?</div>
+        <div class="modal-buttons">
+            <button class="modal-btn cancel focused" id="modalCancelBtn">Cancel</button>
+            <button class="modal-btn confirm" id="modalConfirmBtn" style="background: rgba(180, 20, 20, 0.9);">Remove</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="configModal">
+    <div class="modal-box">
+        <div class="modal-title">Configure Server</div>
+        <div class="modal-desc">This is a self-hosted app. Enter server IP and port.</div>
+        
+        <div class="input-group">
+            <label>IP Address</label>
+            <input type="text" id="configIpInput" class="modal-input focused" placeholder="192.168.1.50">
+        </div>
+        <div class="input-group">
+            <label>Port</label>
+            <input type="text" id="configPortInput" class="modal-input" placeholder="8096">
+        </div>
+
+        <div class="modal-buttons">
+            <button class="modal-btn cancel" id="configCancelBtn">Cancel</button>
+            <button class="modal-btn confirm" id="configConfirmBtn">Install</button>
+        </div>
+    </div>
+</div>
+
+<div class="loading-overlay" id="loading">
+    <div class="loading-box">
+        <div class="loading-title" id="loadingText">Downloading package...</div>
+        <div class="progress-track">
+            <div class="progress-fill" id="loadingFill"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let apps = [];
+    let selectedIndex = 0;
+    
+    let activeModal = null;
+    let removeModalButtonIndex = 0;
+    let pendingApp = null;
+
+    let configFocusIndex = 0;
+    let isEditingInput = false;
+
+    const grid = document.getElementById('appGrid');
+    const topReturnBtn = document.getElementById('topReturnBtn');
+    const toastAlert = document.getElementById('toastAlert');
+    
+    const removeModal = document.getElementById('removeModal');
+    const modalCancelBtn = document.getElementById('modalCancelBtn');
+    const modalConfirmBtn = document.getElementById('modalConfirmBtn');
+    const removeModalText = document.getElementById('removeModalText');
+
+    const configModal = document.getElementById('configModal');
+    const configIpInput = document.getElementById('configIpInput');
+    const configPortInput = document.getElementById('configPortInput');
+    const configCancelBtn = document.getElementById('configCancelBtn');
+    const configConfirmBtn = document.getElementById('configConfirmBtn');
+
+    async function loadAppsFromDirectory() {
+        try {
+            const manifestResponse = await fetch('app/manifest.json');
+            if (!manifestResponse.ok) throw new Error('Manifest not found');
+            
+            const entries = await manifestResponse.json();
+            
+            const appPromises = entries.map(async (entry) => {
+                const folderName = entry.replace(/\.json$/i, '').replace(/\/$/, '');
+                const appUrl = `app/${folderName}/app.json`;
+                const res = await fetch(appUrl);
+                if (!res.ok) throw new Error(`Failed to load ${appUrl}`);
+                return await res.json();
+            });
+
+            apps = await Promise.all(appPromises);
+            render();
+        } catch (error) {
+            console.error('Failed to load apps directory:', error);
+            grid.innerHTML = '<div class="error-text">Failed to load packages. Check console for path errors.</div>';
+            apps = [];
+            selectedIndex = 0;
+            updateSelection();
+        }
+    }
+
+    function getInstalledApps() {
+        const saved = localStorage.getItem('homebrew_user_apps');
+        return saved ? JSON.parse(saved) : [];
+    }
+
+    function isAppInstalled(title) {
+        return getInstalledApps().some(item => item.title === title);
+    }
+
+    function showToast(message) {
+        toastAlert.innerText = message;
+        toastAlert.style.display = 'block';
+        setTimeout(() => { toastAlert.style.display = 'none'; }, 3000);
+    }
+
+    function renderIcon(iconValue) {
+        if (!iconValue) return '📦';
+        if (iconValue.startsWith('http://') || iconValue.startsWith('https://') || iconValue.startsWith('./') || iconValue.startsWith('/')) {
+            return `<img src="${iconValue}" alt="icon">`;
+        }
+        return iconValue;
+    }
+
+    function render() {
+        grid.innerHTML = '';
+        const installedApps = getInstalledApps();
+        const returnIndex = apps.length;
+
+        if (selectedIndex === returnIndex) {
+            topReturnBtn.classList.add('selected');
+        } else {
+            topReturnBtn.classList.remove('selected');
+        }
+
+        topReturnBtn.onclick = () => {
+            selectedIndex = returnIndex;
+            updateSelection();
+            goBack();
+        };
+
+        if (apps.length === 0) {
+            grid.innerHTML = '<div class="loading-text">No packages available in the store yet.</div>';
+            return;
+        }
+
+        apps.forEach((app, index) => {
+            const installed = installedApps.some(item => item.title === app.title);
+            const card = document.createElement('div');
+            card.className = `card ${selectedIndex === index ? 'selected' : ''} ${installed ? 'installed' : ''}`;
+            
+            card.onclick = () => {
+                selectedIndex = index;
+                updateSelection();
+                handleCardAction(app);
+            };
+
+            card.innerHTML = `
+                <div class="card-top">
+                    <div class="card-icon">${renderIcon(app.iconUrl || app.icon)}</div>
+                    <div class="card-title-group">
+                        <div class="card-title">${app.title}</div>
+                        <div class="card-author">${app.author}</div>
+                    </div>
+                </div>
+                <div class="card-desc">${app.desc}</div>
+                <div class="card-action">
+                    <span>${installed ? 'Installed' : 'Install Package'}</span>
+                    <span>${installed ? '✓' : '→'}</span>
+                </div>
+            `;
+            grid.appendChild(card);
+        });
+    }
+
+    function updateSelection() {
+        const returnIndex = apps.length;
+        if (selectedIndex === returnIndex) {
+            topReturnBtn.classList.add('selected');
+            topReturnBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        } else {
+            topReturnBtn.classList.remove('selected');
+        }
+
+        const cards = grid.querySelectorAll('.card');
+        cards.forEach((card, idx) => {
+            if (idx === selectedIndex) {
+                card.classList.add('selected');
+                card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            } else {
+                card.classList.remove('selected');
+            }
+        });
+    }
+
+    function handleCardAction(app) {
+        if (isAppInstalled(app.title)) {
+            openRemoveModal(app);
+        } else {
+            if (app.selfHosted) {
+                openConfigModal(app);
+            } else {
+                installApp(app, app.targetUrl || 'https://example.com/');
+            }
+        }
+    }
+
+    function openConfigModal(app) {
+        pendingApp = app;
+        configFocusIndex = 0;
+        isEditingInput = false;
+        configIpInput.value = '';
+        configPortInput.value = '';
+        configIpInput.blur();
+        configPortInput.blur();
+        updateConfigFocus();
+        configModal.style.display = 'flex';
+        activeModal = 'config';
+    }
+
+    function closeConfigModal() {
+        configIpInput.blur();
+        configPortInput.blur();
+        configModal.style.display = 'none';
+        activeModal = null;
+        isEditingInput = false;
+    }
+
+    function updateConfigFocus() {
+        configIpInput.classList.remove('focused', 'editing');
+        configPortInput.classList.remove('focused', 'editing');
+        configCancelBtn.classList.remove('focused');
+        configConfirmBtn.classList.remove('focused');
+
+        if (configFocusIndex === 0) {
+            configIpInput.classList.add(isEditingInput ? 'editing' : 'focused');
+        } else if (configFocusIndex === 1) {
+            configPortInput.classList.add(isEditingInput ? 'editing' : 'focused');
+        } else if (configFocusIndex === 2) {
+            configCancelBtn.classList.add('focused');
+        } else if (configFocusIndex === 3) {
+            configConfirmBtn.classList.add('focused');
+        }
+    }
+
+    function submitConfigInstall() {
+        if (!pendingApp) return;
+        const appToInstall = pendingApp;
+        const ip = configIpInput.value.trim() || 'localhost';
+        const port = configPortInput.value.trim() || '8096';
+        const targetUrl = `http://${ip}:${port}`;
+        
+        closeConfigModal();
+        installApp(appToInstall, targetUrl);
+    }
+
+    function installApp(app, targetUrl) {
+        const loading = document.getElementById('loading');
+        const fill = document.getElementById('loadingFill');
+        const text = document.getElementById('loadingText');
+
+        text.innerText = `Installing ${app.title}...`;
+        loading.style.display = 'flex';
+        fill.style.width = '0%';
+        void fill.offsetWidth;
+        fill.style.width = '100%';
+
+        setTimeout(() => {
+            const saved = localStorage.getItem('homebrew_user_apps');
+            let userApps = saved ? JSON.parse(saved) : [];
+            
+            if (!userApps.some(item => item.title === app.title)) {
+                userApps.push({
+                    title: app.title,
+                    desc: app.desc,
+                    author: app.author,
+                    targetUrl: targetUrl,
+                    iconUrl: app.iconUrl || app.icon
+                });
+                localStorage.setItem('homebrew_user_apps', JSON.stringify(userApps));
+            }
+
+            loading.style.display = 'none';
+            showToast(`Successfully installed ${app.title}`);
+            render();
+        }, 300);
+    }
+
+    function openRemoveModal(app) {
+        pendingApp = app;
+        removeModalButtonIndex = 0;
+        updateModalFocus();
+        removeModalText.innerText = `Are you sure you want to remove '${app.title}' from your launcher?`;
+        removeModal.style.display = 'flex';
+        activeModal = 'remove';
+    }
+
+    function closeRemoveModal() {
+        removeModal.style.display = 'none';
+        activeModal = null;
+        pendingApp = null;
+    }
+
+    function confirmRemoval() {
+        if (!pendingApp) return;
+        const appToRemove = pendingApp;
+        const saved = localStorage.getItem('homebrew_user_apps');
+        let userApps = saved ? JSON.parse(saved) : [];
+        
+        userApps = userApps.filter(item => item.title !== appToRemove.title);
+        localStorage.setItem('homebrew_user_apps', JSON.stringify(userApps));
+
+        showToast(`Successfully removed ${appToRemove.title}`);
+        closeRemoveModal();
+        render();
+    }
+
+    function updateModalFocus() {
+        if (removeModalButtonIndex === 0) {
+            modalCancelBtn.classList.add('focused');
+            modalConfirmBtn.classList.remove('focused');
+        } else {
+            modalConfirmBtn.classList.add('focused');
+            modalCancelBtn.classList.remove('focused');
+        }
+    }
+
+    function goBack() {
+        window.location.href = 'index.html';
+    }
+
+    window.addEventListener('keydown', (e) => {
+        if (activeModal === 'remove') {
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                removeModalButtonIndex = removeModalButtonIndex === 0 ? 1 : 0;
+                updateModalFocus();
+                e.preventDefault();
+            } else if (e.key === 'Enter') {
+                if (removeModalButtonIndex === 0) closeRemoveModal();
+                else confirmRemoval();
+                e.preventDefault();
+            } else if (e.key === 'Escape' || e.key === 'Backspace') {
+                closeRemoveModal();
+                e.preventDefault();
+            }
+            return;
+        }
+
+        if (activeModal === 'config') {
+            if (isEditingInput) {
+                if (e.key === 'Enter') {
+                    isEditingInput = false;
+                    configIpInput.blur();
+                    configPortInput.blur();
+                    updateConfigFocus();
+                    e.preventDefault();
+                }
+                return;
+            }
+
+            if (e.key === 'ArrowDown') {
+                if (configFocusIndex < 2) configFocusIndex = 2;
+                else if (configFocusIndex === 2 || configFocusIndex === 3) configFocusIndex = 0;
+                updateConfigFocus();
+                e.preventDefault();
+            } else if (e.key === 'ArrowUp') {
+                if (configFocusIndex === 2 || configFocusIndex === 3) configFocusIndex = 1;
+                else if (configFocusIndex === 1) configFocusIndex = 0;
+                else if (configFocusIndex === 0) configFocusIndex = 3;
+                updateConfigFocus();
+                e.preventDefault();
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                if (configFocusIndex === 2 || configFocusIndex === 3) {
+                    configFocusIndex = configFocusIndex === 2 ? 3 : 2;
+                    updateConfigFocus();
+                    e.preventDefault();
+                }
+            } else if (e.key === 'Enter') {
+                if (configFocusIndex === 0) {
+                    isEditingInput = true;
+                    configIpInput.focus();
+                    updateConfigFocus();
+                } else if (configFocusIndex === 1) {
+                    isEditingInput = true;
+                    configPortInput.focus();
+                    updateConfigFocus();
+                } else if (configFocusIndex === 2) {
+                    closeConfigModal();
+                } else if (configFocusIndex === 3) {
+                    submitConfigInstall();
+                }
+                e.preventDefault();
+            } else if (e.key === 'Escape' || e.key === 'Backspace') {
+                closeConfigModal();
+                e.preventDefault();
+            }
+            return;
+        }
+
+        const returnIndex = apps.length;
+        const cols = 3;
+
+        if (e.key === 'ArrowRight') {
+            if (selectedIndex < returnIndex) { selectedIndex++; updateSelection(); }
+            e.preventDefault();
+        } else if (e.key === 'ArrowLeft') {
+            if (selectedIndex > 0 && selectedIndex <= returnIndex) { selectedIndex--; updateSelection(); }
+            e.preventDefault();
+        } else if (e.key === 'ArrowDown') {
+            if (selectedIndex === returnIndex && apps.length > 0) { selectedIndex = 0; updateSelection(); }
+            else if (selectedIndex + cols < returnIndex) { selectedIndex += cols; updateSelection(); }
+            e.preventDefault();
+        } else if (e.key === 'ArrowUp') {
+            if (selectedIndex >= 0 && selectedIndex < cols) { selectedIndex = returnIndex; updateSelection(); }
+            else if (selectedIndex !== returnIndex && selectedIndex - cols >= 0) { selectedIndex -= cols; updateSelection(); }
+            e.preventDefault();
+        } else if (e.key === 'Enter') {
+            if (selectedIndex === returnIndex) { goBack(); }
+            else if (apps.length > 0) { handleCardAction(apps[selectedIndex]); }
+            e.preventDefault();
+        } else if (e.key === 'Backspace') {
+            selectedIndex = returnIndex; updateSelection();
+            e.preventDefault();
+        }
+    });
+
+    modalCancelBtn.onclick = () => closeRemoveModal();
+    modalConfirmBtn.onclick = () => confirmRemoval();
+    configCancelBtn.onclick = () => closeConfigModal();
+    configConfirmBtn.onclick = () => submitConfigInstall();
+
+    // Background Bubble Generator matching the launcher design
+    const container = document.getElementById('appScreen');
+    const bubbleCount = 20;
+
+    for (let i = 0; i < bubbleCount; i++) {
+        const b = document.createElement('div');
+        b.className = 'bubble';
+        const size = 10 + Math.random() * 25;
+        b.style.width = `${size}px`;
+        b.style.height = `${size}px`;
+        b.style.left = `${Math.random() * 100}vw`;
+        b.style.setProperty('--duration', `${8 + Math.random() * 6}s`);
+        b.style.setProperty('--delay', `${-Math.random() * 8}s`);
+        container.appendChild(b);
+    }
+
+    loadAppsFromDirectory();
+</script>
+
+</body>
+</html>
