@@ -283,13 +283,13 @@
                 let rawIcon = appData.iconUrl || appData.icon || '📦';
                 let resolvedIcon = rawIcon;
                 if (rawIcon.startsWith('./')) {
-                    resolvedIcon = new URL(`apps/${folderName}/${rawIcon.substring(2)}`, window.location.href).href;
+                    resolvedIcon = new URL(`${folderName}/${rawIcon.substring(2)}`, new URL('apps/', window.location.href)).href;
                 } else if (rawIcon.startsWith('http://') || rawIcon.startsWith('https://')) {
                     resolvedIcon = rawIcon;
                 } else if (rawIcon.startsWith('/')) {
                     resolvedIcon = new URL(rawIcon, window.location.origin).href;
                 } else {
-                    resolvedIcon = new URL(`apps/${folderName}/${rawIcon}`, window.location.href).href;
+                    resolvedIcon = new URL(`${folderName}/${rawIcon}`, new URL('apps/', window.location.href)).href;
                 }
                 appData._resolvedIcon = resolvedIcon;
                 return appData;
@@ -646,7 +646,7 @@
 
     modalCancelBtn.onclick = () => closeRemoveModal();
     modalConfirmBtn.onclick = () => confirmRemoval();
-    configCancelBtn.onclick = () => closeConfigManager();
+    configCancelBtn.onclick = () => closeConfigModal();
     configConfirmBtn.onclick = () => submitConfigInstall();
 
     const container = document.getElementById('appScreen');
