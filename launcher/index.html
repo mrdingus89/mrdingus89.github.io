@@ -662,8 +662,8 @@
                 if (item.targetUrl && item.targetUrl.trim() !== '') {
                     window.location.href = item.targetUrl.trim();
                 } else {
-                    alert(`Launching '${item.title}' by ${item.author}...`);
                     loading.style.display = 'none';
+                    showToast(`No link set for '${item.title}'`);
                 }
             }, 200);
 
