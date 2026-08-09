@@ -46,6 +46,23 @@
             text-shadow: 0 2px 4px rgba(0,0,0,0.4);
         }
 
+        .toast-alert {
+            position: absolute;
+            top: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(54, 16, 90, 0.95);
+            border: 1px solid #e040fb;
+            color: #ebd0ff;
+            padding: 10px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            display: none;
+            z-index: 50;
+        }
+
         .logo {
             position: absolute;
             top: 15.5%;
@@ -448,6 +465,7 @@
 <div class="screen" id="app">
     <div class="hud">
         <div class="time" id="timeElement"></div>
+        <div class="toast-alert" id="toastAlert"></div>
 
         <div class="logo" id="logo">
             <h1>the</h1>
@@ -530,9 +548,16 @@
     const track = document.getElementById('track');
     const music = document.getElementById('music');
     const timeElement = document.getElementById('timeElement');
+    const toastAlert = document.getElementById('toastAlert');
 
     if (!time) {
         timeElement.style.display = 'none';
+    }
+
+    function showToast(message) {
+        toastAlert.innerText = message;
+        toastAlert.style.display = 'block';
+        setTimeout(() => { toastAlert.style.display = 'none'; }, 3000);
     }
 
     function startMusic() {
@@ -604,12 +629,14 @@
     }
 
     function removeItem(index) {
+        const removedTitle = items[index].title;
         items.splice(index, 1);
         save();
         if (selectedIndex >= getCount()) {
             selectedIndex = Math.max(0, getCount() - 1);
         }
         render();
+        showToast(`Successfully removed ${removedTitle}`);
     }
 
     function getCount() {
