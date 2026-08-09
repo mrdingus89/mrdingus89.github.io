@@ -439,9 +439,23 @@
 
     function submitConfigInstall() {
         if (!pendingApp) return;
+        
+        const ip = configIpInput.value.trim();
+        const port = configPortInput.value.trim();
+        
+        // Validation check for self-hosted IP and Port
+        if (!ip && !port) {
+            showToast("IP Address and Port is required!");
+            return;
+        } else if (!ip) {
+            showToast("IP Address is required!");
+            return;
+        } else if (!port) {
+            showToast("Port is required!");
+            return;
+        }
+
         const appToInstall = pendingApp;
-        const ip = configIpInput.value.trim() || 'localhost';
-        const port = configPortInput.value.trim() || '8096';
         const targetUrl = `http://${ip}:${port}`;
         
         closeConfigModal();
