@@ -235,7 +235,6 @@
 
     let configFocusIndex = 0;
     let isEditingInput = false;
-    let isAudioInitialized = false;
 
     const grid = document.getElementById('appGrid');
     const topReturnBtn = document.getElementById('topReturnBtn');
@@ -255,20 +254,9 @@
     const bgMusic = document.getElementById('bgMusic');
 
     function initAudio() {
-        if (isAudioInitialized) return;
-        const savedMusicTime = localStorage.getItem('homebrew_music_time');
-        if (savedMusicTime) {
-            bgMusic.currentTime = parseFloat(savedMusicTime);
-        }
         bgMusic.volume = 0.4;
-        bgMusic.play().then(() => {
-            isAudioInitialized = true;
-        }).catch(() => {});
+        bgMusic.play().catch(() => {});
     }
-
-    window.addEventListener('beforeunload', () => {
-        localStorage.setItem('homebrew_music_time', bgMusic.currentTime);
-    });
 
     async function loadAppsFromDirectory() {
         try {
@@ -532,7 +520,6 @@
     }
 
     function goBack() {
-        localStorage.setItem('homebrew_music_time', bgMusic.currentTime);
         window.location.href = 'https://mrdingus89.github.io/launcher/';
     }
 
