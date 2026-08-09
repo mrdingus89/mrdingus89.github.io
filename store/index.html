@@ -278,7 +278,16 @@
                 const appUrl = `apps/${folderName}/appInfo.json`;
                 const res = await fetch(appUrl);
                 if (!res.ok) throw new Error(`Failed to load ${appUrl}`);
-                return await res.json();
+                const appData = await res.json();
+                
+                let resolvedIcon = appData.iconUrl || appData.icon || '📦';
+                if (resolvedIcon.startsWith('./')) {
+                    resolvedIcon = `apps/${folderName}/${resolvedIcon.substring(2)}`;
+                } else if (!resolvedIcon.startsWith('http://') && !resolvedIcon.startsWith('https://') && !resolvedIcon.startsWith('/')) {
+                    resolvedIcon = `apps/${folderName}/${resolvedIcon}`;
+                }
+                appData._resolvedIcon = resolvedIcon;
+                return appData;
             });
 
             apps = await Promise.all(appPromises);
@@ -312,7 +321,7 @@
         if (iconValue.startsWith('http://') || iconValue.startsWith('https://') || iconValue.startsWith('./') || iconValue.startsWith('/')) {
             return `<img src="${iconValue}" alt="icon">`;
         }
-        return iconValue;
+        return `<img src="${iconValue}" alt="icon">`;
     }
 
     function render() {
@@ -350,7 +359,7 @@
 
             card.innerHTML = `
                 <div class="card-top">
-                    <div class="card-icon">${renderIcon(app.iconUrl || app.icon)}</div>
+                    <div class="card-icon">${renderIcon(app._resolvedIcon)}</div>
                     <div class="card-title-group">
                         <div class="card-title">${app.title}</div>
                         <div class="card-author">${app.author}</div>
@@ -468,7 +477,7 @@
                     desc: app.desc,
                     author: app.author,
                     targetUrl: targetUrl,
-                    iconUrl: app.iconUrl || app.icon
+                    iconUrl: app._resolvedIcon
                 });
                 localStorage.setItem('homebrew_user_apps', JSON.stringify(userApps));
             }
@@ -527,9 +536,17 @@
         initAudio();
 
         if (activeModal === 'remove') {
-            if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-                removeModalButtonIndex = removeModalButtonIndex === 0 ? 1 : 0;
-                updateModalFocus();
+            if (e.key === 'ArrowLeft') {
+                if (removeModalButtonIndex === 1) {
+                    removeModalButtonIndex = 0;
+                    updateModalFocus();
+                }
+                e.preventDefault();
+            } else if (e.key === 'ArrowRight') {
+                if (removeModalButtonIndex === 0) {
+                    removeModalButtonIndex = 1;
+                    updateModalFocus();
+                }
                 e.preventDefault();
             } else if (e.key === 'Enter') {
                 if (removeModalButtonIndex === 0) closeRemoveModal();
@@ -564,12 +581,18 @@
                 else if (configFocusIndex === 1) configFocusIndex = 0;
                 updateConfigFocus();
                 e.preventDefault();
-            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-                if (configFocusIndex === 2 || configFocusIndex === 3) {
-                    configFocusIndex = configFocusIndex === 2 ? 3 : 2;
+            } else if (e.key === 'ArrowLeft') {
+                if (configFocusIndex === 3) {
+                    configFocusIndex = 2;
                     updateConfigFocus();
-                    e.preventDefault();
                 }
+                e.preventDefault();
+            } else if (e.key === 'ArrowRight') {
+                if (configFocusIndex === 2) {
+                    configFocusIndex = 3;
+                    updateConfigFocus();
+                }
+                e.preventDefault();
             } else if (e.key === 'Enter') {
                 if (configFocusIndex === 0) {
                     isEditingInput = true;
